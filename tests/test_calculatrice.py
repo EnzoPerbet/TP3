@@ -6,7 +6,7 @@ import unittest
 from app.calculatrice import addition, soustraction, multiplication, division, puissance, modulo, calcul_complexe
 
 class TestCalculatrice(unittest.TestCase):
-    def test_addition(self):
+    def test_addition(self): 
         self.assertEqual(addition(3, 4), 7)
         self.assertEqual(addition(-1, 1), 0)
 
