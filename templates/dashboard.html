@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="dashboard-page">
+    <h1>Dashboard - Mes Tâches</h1>
+    
+    <!-- Formulaire d'ajout de tâche -->
+    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 30px;">
+        <h3>Ajouter une nouvelle tâche</h3>
+        <form method="POST" action="{{ url_for('add_task_route') }}" id="add-task-form">
+            <div class="form-group">
+                <label for="title">Titre * :</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description :</label>
+                <textarea id="description" name="description" rows="3"></textarea>
+            </div>
+            
+            <button type="submit" class="btn" id="add-task-btn">Ajouter la tâche</button>
+        </form>
+    </div>
+
+    <!-- Liste des tâches -->
+    <h3>Mes tâches ({{ tasks|length }})</h3>
+    
+    {% if tasks %}
+        <div id="tasks-list">
+            {% for task in tasks %}
+                <div class="task {% if task.completed %}completed{% endif %}" data-task-id="{{ task.id }}">
+                    <div class="task-title">
+                        <strong>{{ task.title }}</strong>
+                        {% if task.completed %}
+                            <span style="color: #28a745; font-weight: bold;">[TERMINÉE]</span>
+                        {% endif %}
+                    </div>
+                    {% if task.description %}
+                        <div class="task-description" style="margin-top: 5px; color: #666;">
+                            {{ task.description }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="task-actions">
+                        <a href="{{ url_for('toggle_task', task_id=task.id) }}" 
+                           class="btn {% if task.completed %}btn-success{% else %}btn{% endif %}"
+                           id="toggle-{{ task.id }}">
+                            {% if task.completed %}Marquer comme non terminée{% else %}Marquer comme terminée{% endif %}
+                        </a>
+                        <a href="{{ url_for('delete_task_route', task_id=task.id) }}" 
+                           class="btn btn-danger"
+                           id="delete-{{ task.id }}"
+                           onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette tâche ?')">
+                            Supprimer
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div id="no-tasks" style="text-align: center; padding: 40px; background-color: #f8f9fa; border-radius: 4px;">
+            <p style="font-size: 18px; color: #666;">Aucune tâche pour le moment.</p>
+            <p>Ajoutez votre première tâche ci-dessus !</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+    
+    steps:
+    # 1. Loading : récupération du code
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # 2. Setup Python environment
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    # 3. Build : installation des dépendances
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install coverage
+    
+    # 4. Tests unitaires avec Pytest
+    - name: Run unit tests with coverage
+      run: |
+        coverage run -m pytest test_app.py -v --html=reports/unit-tests-report.html --self-contained-html
+        coverage xml -o reports/coverage.xml
+        coverage html -d reports/coverage-html
+    
+    # 5. Setup Chrome pour les tests Selenium
+    - name: Setup Chrome
+      uses: browser-actions/setup-chrome@latest
+      with:
+        chrome-version: stable
+    
+    - name: Setup ChromeDriver
+      uses: nanasess/setup-chromedriver@master
+    
+    # 6. Tests fonctionnels Selenium
+    - name: Run Selenium tests
+      run: |
+        export PATH=$PATH:$(chromedriver --version | grep -o '/[^/]*chromedriver')
+        pytest test_selenium.py -v --html=reports/selenium-tests-report.html --self-contained-html
+      env:
+        DISPLAY: :99.0
+    
+    # 7. Upload des rapports de tests
+    - name: Upload test reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-reports-python-${{ matrix.python-version }}
+        path: |
+          reports/
+    
+    # 8. Publication des résultats de coverage
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: matrix.python-version == '3.11'
+      with:
+        file: reports/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  # Job de déploiement (seulement si tous les tests passent)
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    # Simulation du déploiement
+    - name: Deploy application
+      run: |
+        echo "Déploiement de l'application..."
+        echo "Application déployée avec succès!"
+        # Ici, vous pourriez ajouter les commandes réelles de déploiement
+        # Par exemple: docker build, docker push, kubectl apply, etc.
+    
+    # Notification de succès
+    - name: Notify deployment success
+      run: |
+        echo "Notification: Déploiement réussi sur la branche main"
+
+  # Job pour publier les rapports de test sur GitHub Pages (optionnel)
+  publish-reports:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Download test reports
+      uses: actions/download-artifact@v3
+      with:
+        name: test-reports-python-3.11
+        path: reports/
+    
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: reports/
+        destination_dir: test-reports
