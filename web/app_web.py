@@ -88,12 +88,10 @@ HTML = """
       <button type="submit">Calculer</button>
     </form>
 
-    {% if result is not none %}
-      {% if 'Erreur' in result %}
-        <div class="error">{{ result }}</div>
-      {% else %}
-        <div class="result">Résultat : {{ result }}</div>
-      {% endif %}
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% elif result is not none %}
+      <div class="result">Résultat : {{ result }}</div>
     {% endif %}
   </div>
 </body>
@@ -103,10 +101,17 @@ HTML = """
 @app.route("/", methods=["GET", "POST"])
 def calculatrice():
     result = None
+    error = None
     if request.method == "POST":
-        a = float(request.form["a"])
-        b = float(request.form["b"])
+        try:
+            a = float(request.form["a"])
+            b = float(request.form["b"])
+        except ValueError:
+            error = "Erreur : Veuillez entrer des nombres valides."
+            return render_template_string(HTML, result=result, error=error)
+
         operation = request.form["operation"]
+        
         try:
             match operation:
                 case "addition":
@@ -119,9 +124,14 @@ def calculatrice():
                     result = division(a, b)
                 case "puissance":
                     result = puissance(a, b)
+        except ValueError as e:
+            error = f"Erreur : {e}"
+            return render_template_string(HTML, result=result, error=error)
         except Exception as e:
-            result = f"Erreur : {e}"
-    return render_template_string(HTML, result=result)
+            error = f"Erreur : {e}"
+            return render_template_string(HTML, result=result, error=error)
+            
+    return render_template_string(HTML, result=result, error=error)
 
 if __name__ == "__main__":
     app.run(debug=True)
